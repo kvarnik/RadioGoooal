@@ -1,0 +1,10 @@
+.DS_Store
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+*.pyc
+
+# Nested StatsBomb clone, kept locally so the synthetic match can be regenerated.
+# The match the broadcast plays is copied into broadcast/data.
+open-data/

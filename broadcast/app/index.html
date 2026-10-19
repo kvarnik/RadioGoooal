@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matchday Wireless</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Josefin+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+<main class="cabinet">
+<header class="mast">
+<div class="titles">
+<div class="plate">MATCHDAY WIRELESS</div>
+<p class="subtitle">Arsesnail v Mancheater City · synthetic match 9000001 · minutes 87–92 · polished chrome finish</p>
+</div>
+<div class="air">
+<div id="lamp" class="lamp" aria-hidden="true"></div>
+<div id="air-label" class="air-label">PAUSED</div>
+</div>
+</header>
+
+<section class="deck" aria-label="Transport deck">
+<div class="counter-block">
+<span class="deck-label">MATCH COUNTER</span>
+<div id="counter" class="counter" role="img" aria-label="Match clock 87:00"></div>
+</div>
+<div class="keys">
+<button type="button" id="rewind" class="key" aria-label="Rewind: tap to go back 5 seconds, hold to scan backward">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 L3 12 L11 18 Z M21 6 L13 12 L21 18 Z"></path></svg>
+<span>REWIND</span>
+</button>
+<button type="button" id="play" class="key" aria-label="Play" aria-pressed="false">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4 L20 12 L7 20 Z"></path></svg>
+<span>PLAY</span>
+</button>
+<button type="button" id="pause" class="key" aria-label="Pause" aria-pressed="true">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+<span>PAUSE</span>
+</button>
+<button type="button" id="forward" class="key" aria-label="Fast forward: tap to skip 5 seconds, hold to scan forward">
+<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6 L11 12 L3 18 Z M13 6 L21 12 L13 18 Z"></path></svg>
+<span>FAST FWD</span>
+</button>
+</div>
+<div class="scrub-block">
+<div class="scrub-caption">
+<span>TAP ±5 s · HOLD TO SCAN 6×</span>
+<span id="scan-label" class="scan-label">❚❚</span>
+</div>
+<div class="scrub-wrap">
+<div class="tick" style="left: 1.67%"></div>
+<div class="tick" style="left: 89.33%"></div>
+<div class="tick" style="left: 90%"></div>
+<input id="scrub" class="scrub" type="range" min="0" max="300" value="0" aria-label="Match clock, 87:00 to 92:00">
+</div>
+<div class="scrub-ends"><span>87:00</span><span>92:00</span></div>
+</div>
+</section>
+
+<div class="stage">
+<section class="glass" aria-label="Pitch and call">
+<div class="glass-inner">
+<div class="scoreboard">
+<div class="side"><span class="club">ARSESNAIL</span><span id="score-home" class="goals">4</span></div>
+<div id="glass-clock" class="glass-clock">87:00</div>
+<div class="side side-away"><span id="score-away" class="goals">1</span><span class="club">MANCHEATER CITY</span></div>
+</div>
+<div id="pitch" class="pitch" aria-label="Reconstructed pitch">
+<svg class="lines" viewBox="0 0 120 80" aria-hidden="true">
+<g fill="none" stroke="#e9dcc0" stroke-width="0.35" stroke-opacity="0.85">
+<rect x="0.6" y="0.6" width="118.8" height="78.8"></rect>
+<line x1="60" y1="0.6" x2="60" y2="79.4"></line>
+<circle cx="60" cy="40" r="10"></circle>
+<rect x="0.6" y="18" width="17.4" height="44"></rect>
+<rect x="0.6" y="30" width="5.4" height="20"></rect>
+<rect x="102" y="18" width="17.4" height="44"></rect>
+<rect x="114" y="30" width="5.4" height="20"></rect>
+<path d="M18 32 A10 10 0 0 1 18 48"></path>
+<path d="M102 32 A10 10 0 0 0 102 48"></path>
+<line x1="0.6" y1="36" x2="0.6" y2="44" stroke-width="1.2"></line>
+<line x1="119.4" y1="36" x2="119.4" y2="44" stroke-width="1.2"></line>
+</g>
+<g fill="#e9dcc0" fill-opacity="0.85">
+<circle cx="60" cy="40" r="0.5"></circle>
+<circle cx="12" cy="40" r="0.45"></circle>
+<circle cx="108" cy="40" r="0.45"></circle>
+</g>
+</svg>
+<div id="players"></div>
+<div id="ball" class="ball"></div>
+<div class="badge">Positions reconstructed · 1 Hz track</div>
+</div>
+</div>
+<div class="call-block">
+<div class="call-meta"><span id="who">ANALYST · CLASSIC</span><span id="moment-tag" class="moment-tag">87:00 · OPENING</span></div>
+<p id="call" class="call">Loading the cached call.</p>
+<div class="analyst-label" id="analyst-label">ANALYST</div>
+<p id="analyst" class="analyst"></p>
+<button type="button" id="rewrite" class="rewrite">Rewrite this call</button>
+<p id="rewrite-note" class="rewrite-note" hidden>Local template. The live rewrite waits on the API.</p>
+</div>
+</section>
+
+<aside class="side-stack">
+<div class="grille" aria-hidden="true"></div>
+<section class="stats" aria-label="Match stats">
+<div class="stats-head"><span id="stats-at">AT 87:00</span><span>Arsesnail</span><span>Mancheater</span></div>
+<div class="stats-row"><span>Shots</span><span id="shots-home" class="num">—</span><span id="shots-away" class="num">—</span></div>
+<div class="stats-row"><span>Expected goals</span><span id="xg-home" class="num">—</span><span id="xg-away" class="num accent">—</span></div>
+<div class="stats-row"><span>Pass completion</span><span id="pass-home" class="num">—</span><span id="pass-away" class="num">—</span></div>
+<div id="control" class="control">Control vs chaos</div>
+</section>
+<section class="player-card" aria-label="Your player">
+<div class="card-kicker">YOUR PLAYER</div>
+<div id="player-name" class="player-name">Robert Hampstead</div>
+<div id="player-sub" class="player-sub">Click a player on the pitch</div>
+<div id="player-line" class="player-line"></div>
+<div id="player-extra" class="player-line"></div>
+<div id="player-pass" class="player-line"></div>
+<div id="player-speed" class="player-speed"></div>
+</section>
+</aside>
+</div>
+
+<div class="bottom">
+<section class="tuner" aria-label="Announcer style">
+<div class="tune-head"><span>TUNING · ANNOUNCER</span><span id="voices" class="voices"></span></div>
+<div class="tune-controls">
+<div class="seg" role="group" aria-label="Language">
+<button type="button" data-lang="en" aria-pressed="true">English</button>
+<button type="button" data-lang="es" aria-pressed="false">Español</button>
+<button type="button" data-lang="pt" aria-pressed="false">Português</button>
+</div>
+<div class="seg" role="group" aria-label="Club bias">
+<button type="button" data-bias="neutral" aria-pressed="true">Neutral</button>
+<button type="button" data-bias="arsesnail" aria-pressed="false">Arsesnail</button>
+<button type="button" data-bias="city" aria-pressed="false">Mancheater City</button>
+</div>
+</div>
+<div class="dial">
+<div class="dial-arc" aria-hidden="true"></div>
+<div id="needle" class="needle" aria-hidden="true"></div>
+<div class="dial-hub" aria-hidden="true"></div>
+<div id="styles"></div>
+</div>
+</section>
+<section class="mixer" aria-label="Mixer">
+<div class="mix-group">
+<div class="mix-label">CROWD · ONE STEM</div>
+<div id="crowd" class="fader-row"></div>
+</div>
+<div class="mix-group">
+<div class="mix-label">BROADCAST · MONO OUT</div>
+<div id="broadcast" class="fader-row"></div>
+</div>
+</section>
+</div>
+
+<footer class="colophon">
+<span>Event data: StatsBomb open data, synthetic match 9000001. Player positions reconstructed at 1 Hz.</span>
+<span>Crowd and effects: CC0 clips via Freesound</span>
+</footer>
+</main>
+</div>
+<script src="main.js" type="module"></script>
+</body>
+</html>

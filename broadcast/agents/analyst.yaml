@@ -1,0 +1,6 @@
+name: analyst
+order: 3
+pattern: concurrent
+instructions: >
+  Write one short analyst line in the selected style and language, and only when the editor hands a moment off.
+  Use only the fact bundle. Keep numbers as digits. Do not predict the result.

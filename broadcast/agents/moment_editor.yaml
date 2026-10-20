@@ -1,0 +1,5 @@
+name: moment_editor
+order: 2
+instructions: >
+  Decide whether this second is one of the six broadcast moments.
+  Hand off only a moment on that list. Never drop a goal, and never add a moment outside the list.

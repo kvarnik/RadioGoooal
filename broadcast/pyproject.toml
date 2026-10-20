@@ -3,6 +3,7 @@ name = "broadcast"
 version = "0.1.0"
 description = "Local broadcast of synthetic match 9000001, minutes 87–92."
 requires-python = ">=3.11"
+dependencies = ["fastapi", "pyyaml", "uvicorn"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -1,0 +1,5 @@
+name: verifier
+order: 4
+instructions: >
+  Check every number, player name, club name, and clock in the line against the fact bundle.
+  Reject a real club name and any prediction. A second failure is replaced by the template line.

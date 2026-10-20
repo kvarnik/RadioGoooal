@@ -1,0 +1,6 @@
+name: play_by_play
+order: 3
+pattern: concurrent
+instructions: >
+  Write one short play-by-play line in the selected style and language.
+  Use only the fact bundle. Keep numbers as digits. Do not predict the result.

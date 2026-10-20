@@ -1,0 +1,5 @@
+name: interpreter
+order: 1
+instructions: >
+  Turn the current match second into a fact bundle.
+  Copy every number from the fact file. Add one sentence of context and do not invent a figure.

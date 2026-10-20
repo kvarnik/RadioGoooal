@@ -1,3 +1,5 @@
+import { setFader, startVoices, stopVoices } from "./audio.js";
+
 const HOME = "1";
 const AWAY = "36";
 const STYLES = [
@@ -32,6 +34,7 @@ const state = {
   bias: "neutral",
   focus: null,
   rewritten: false,
+  rewriteNote: "",
   ready: false,
 };
 
@@ -39,6 +42,7 @@ let facts;
 let templates;
 let positions;
 let speed;
+let cache = null;
 let acc = 0;
 let resume = false;
 let scanning = 0;
@@ -65,10 +69,31 @@ function momentAt(sec) {
   return current;
 }
 
+function clipFor(moment, role) {
+  if (!cache || !moment) return null;
+  const bias = state.style === "homefan" ? state.bias : "neutral";
+  return cache.entries.find((entry) =>
+    entry.moment === moment.id &&
+    entry.style === state.style &&
+    entry.lang === state.lang &&
+    entry.bias === bias &&
+    entry.role === role
+  );
+}
+
+function speakMoment(moment) {
+  if (!moment || state.rewritten || state.scan) return;
+  startVoices(clipFor(moment, "call"), clipFor(moment, "analyst"));
+}
+
 function seek(next) {
+  const previous = state.sec;
   acc = 0;
   state.sec = Math.max(0, Math.min(300, Math.round(Number(next))));
   state.rewritten = false;
+  state.rewriteNote = "";
+  stopVoices();
+  if (state.sec !== previous) speakMoment(templates?.moments.find((item) => item.t === state.sec));
   render();
 }
 
@@ -103,11 +128,16 @@ function skip(dir) {
 }
 
 function play() {
-  if (state.sec >= 300) seek(0);
+  if (state.sec >= 300) {
+    state.sec = 0;
+    state.rewritten = false;
+    state.rewriteNote = "";
+  }
   acc = 0;
   state.playing = true;
   state.rate = 1;
   state.scan = 0;
+  speakMoment(templates?.moments.find((item) => item.t === state.sec));
   render();
 }
 
@@ -115,6 +145,7 @@ function pause() {
   state.playing = false;
   state.rate = 1;
   state.scan = 0;
+  stopVoices();
   render();
 }
 
@@ -131,9 +162,17 @@ function tick() {
     step -= 1;
   }
   if (!step) return;
+  const previous = state.sec;
   const next = Math.max(0, Math.min(300, state.sec + step));
   const stop = (next === 300 && step > 0) || (next === 0 && step < 0);
   state.sec = next;
+  if (step > 0 && !state.scan) {
+    let crossed = null;
+    for (const moment of templates.moments) {
+      if (previous < moment.t && moment.t <= next) crossed = moment;
+    }
+    if (crossed) speakMoment(crossed);
+  }
   state.rewritten = false;
   if (stop) {
     state.playing = false;
@@ -238,6 +277,7 @@ function renderCall(sec) {
   $("analyst-label").textContent = ANALYST[state.lang];
   $("analyst").textContent = pack.analyst;
   $("rewrite-note").hidden = !state.rewritten;
+  if (state.rewritten) $("rewrite-note").textContent = state.rewriteNote;
 }
 
 function render() {
@@ -309,8 +349,23 @@ function bindTransport() {
   $("pause").addEventListener("click", pause);
   $("scrub").addEventListener("input", (event) => seek(event.target.value));
   $("rewrite").addEventListener("click", () => {
+    const moment = momentAt(state.sec);
+    const pack = moment.lines[state.style][state.lang][state.bias];
     state.rewritten = true;
+    state.rewriteNote = "Local template. The live rewrite waits on the API.";
     render();
+    fetch("http://127.0.0.1:8787/rewrite", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sec: state.sec, style: state.style, lang: state.lang, bias: state.bias }),
+    }).then(async (response) => {
+      if (!response.ok) return;
+      const data = await response.json();
+      pack.rewrite = data.line;
+      state.rewriteNote = data.note;
+      state.rewritten = true;
+      render();
+    }).catch(() => {});
   });
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement || event.repeat) return;
@@ -346,6 +401,7 @@ function bindChoices() {
     button.addEventListener("click", () => {
       state.style = style.id;
       state.rewritten = false;
+      stopVoices();
       render();
     });
     root.append(button);
@@ -354,6 +410,7 @@ function bindChoices() {
     button.addEventListener("click", () => {
       state.lang = button.dataset.lang;
       state.rewritten = false;
+      stopVoices();
       render();
     });
   }
@@ -361,6 +418,7 @@ function bindChoices() {
     button.addEventListener("click", () => {
       state.bias = button.dataset.bias;
       state.rewritten = false;
+      stopVoices();
       render();
     });
   }
@@ -377,9 +435,12 @@ function bindChoices() {
     input.max = "100";
     input.value = String(spec.value);
     input.setAttribute("aria-label", `${spec.label} level`);
+    input.id = `fader-${spec.id}`;
     input.addEventListener("input", () => {
       value.textContent = input.value;
+      setFader(spec.id, Number(input.value) / 100);
     });
+    setFader(spec.id, spec.value / 100);
     const name = document.createElement("span");
     name.className = "fader-name";
     name.textContent = spec.label;
@@ -389,11 +450,12 @@ function bindChoices() {
 }
 
 async function load() {
-  const [factFile, templateFile, positionFile, speedFile] = await Promise.all([
+  const [factFile, templateFile, positionFile, speedFile, cacheFile] = await Promise.all([
     fetch("../data/facts.json"),
     fetch("../data/templates.json"),
     fetch("../data/9000001-positions.json"),
     fetch("../data/speed.json"),
+    fetch("../data/audio/cache.json"),
   ]);
   if (![factFile, templateFile, positionFile, speedFile].every((response) => response.ok)) {
     $("call").textContent = "The cached files did not load. Serve the repo root and open broadcast/app/.";
@@ -403,6 +465,7 @@ async function load() {
   templates = await templateFile.json();
   positions = await positionFile.json();
   speed = await speedFile.json();
+  cache = cacheFile.ok ? await cacheFile.json() : null;
   state.ready = true;
   render();
 }

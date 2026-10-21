@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import re
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -16,7 +19,7 @@ from verify import verify_line
 CHAR_LIMIT = 100_000
 PLACEHOLDER_VOICE = "pending-voice-name"
 LOCALES = {"en": "en-US", "es": "es-ES", "pt": "pt-BR"}
-TOKEN = re.compile(r"\d{1,2}:\d{2}|\d+(?:\.\d+)?")
+TOKEN = re.compile(r"\b(\d+)(?:st|nd|rd|th)\b|\b\d{1,2}:\d{2}\b|\d+(?:\.\d+)?", re.IGNORECASE)
 
 
 def variants() -> list[tuple[str, str]]:
@@ -30,6 +33,8 @@ def speakable(text: str) -> str:
     escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def wrap(match: re.Match[str]) -> str:
+        if match.group(1):
+            return f'<say-as interpret-as="ordinal">{match.group(1)}</say-as>'
         token = match.group(0)
         if ":" in token:
             minute, second = token.split(":")
@@ -38,8 +43,7 @@ def speakable(text: str) -> str:
                 ":"
                 f'<say-as interpret-as="number_digit">{second}</say-as>'
             )
-        kind = "cardinal" if "." in token else "number_digit"
-        return f'<say-as interpret-as="{kind}">{token}</say-as>'
+        return f'<say-as interpret-as="cardinal">{token}</say-as>'
 
     return TOKEN.sub(wrap, escaped)
 
@@ -90,11 +94,31 @@ def _configured() -> tuple[str, str] | None:
     return region, key
 
 
+def _read(request: urllib.request.Request, timeout: int) -> bytes:
+    """F0 allows about 20 neural requests a minute. A 429 waits and tries again."""
+    delay = 3
+    last: urllib.error.HTTPError | None = None
+    for _ in range(8):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            last = error
+            if error.code != 429:
+                raise
+        except (http.client.IncompleteRead, TimeoutError, urllib.error.URLError):
+            last = None
+        time.sleep(delay)
+        delay = min(delay * 2, 30)
+    if isinstance(last, urllib.error.HTTPError):
+        raise last
+    raise RuntimeError("speech request failed after retries")
+
+
 def list_voices(region: str, key: str) -> list[dict]:
     url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
     request = urllib.request.Request(url, headers={"Ocp-Apim-Subscription-Key": key})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return json.loads(_read(request, 30).decode("utf-8"))
 
 
 def synthesize(document: str, region: str, key: str, dest: Path) -> None:
@@ -110,8 +134,13 @@ def synthesize(document: str, region: str, key: str, dest: Path) -> None:
             "User-Agent": "RadioGoooal",
         },
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        dest.write_bytes(response.read())
+    dest.write_bytes(_read(request, 60))
+
+
+def clip_ready(path: Path) -> bool:
+    if not path.is_file() or path.stat().st_size < 1000:
+        return False
+    return path.read_bytes()[:4] == b"RIFF"
 
 
 def _fallback(moment_id: str, lang: str, role: str) -> str:
@@ -196,10 +225,16 @@ def build_speech_cache(squad: list[str], dest: Path) -> dict:
         enforce_budget(sum(len(document) for document in real))
         clip_dir = dest / "clips"
         clip_dir.mkdir(parents=True, exist_ok=True)
-        for entry, document in zip(entries, real, strict=True):
+        for index, (entry, document) in enumerate(zip(entries, real, strict=True), start=1):
             name = entry["id"].replace("/", "-") + ".wav"
-            synthesize(document, region, key, clip_dir / name)
+            path = clip_dir / name
             entry["file"] = f"clips/{name}"
+            if clip_ready(path):
+                print(f"speech {index}/{len(entries)} {entry['id']} cached", flush=True)
+                continue
+            print(f"speech {index}/{len(entries)} {entry['id']}", flush=True)
+            synthesize(document, region, key, path)
+            time.sleep(3)
         cache["speech"] = "azure"
         cache["characters"] = sum(len(document) for document in real)
         cache["voices"] = voices
@@ -208,11 +243,11 @@ def build_speech_cache(squad: list[str], dest: Path) -> dict:
         json.dumps(cache, ensure_ascii=False, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
-    _write_voices(dest / "VOICES.md", voices, cache["characters"])
+    _write_voices(dest / "VOICES.md", voices, cache["characters"], None if config is None else config[0])
     return cache
 
 
-def _write_voices(path: Path, voices: dict | None, characters: int) -> None:
+def _write_voices(path: Path, voices: dict | None, characters: int, region: str | None) -> None:
     if not voices:
         path.write_text(
             "# Voices\n\n"
@@ -229,5 +264,8 @@ def _write_voices(path: Path, voices: dict | None, characters: int) -> None:
     for lang, pair in voices.items():
         lines.append(f"- {lang} play-by-play: `{pair['call']}`")
         lines.append(f"- {lang} analyst: `{pair['analyst']}`")
-    lines.append(f"\nThe cache asked Speech for {characters} characters.\n")
+    lines.append(f"\nThe cache asked Speech for {characters} characters.")
+    if region:
+        lines.append(f"Region `{region}`.")
+    lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")

@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from cues import match_cues
 from facts import EVENTS_PATH, _player_names, build_facts
 from positions import (
     POSITIONS_PATH,
@@ -22,6 +23,7 @@ from templates import build_templates
 
 FACTS_PATH = Path(__file__).resolve().parents[1] / "data" / "facts.json"
 TEMPLATES_PATH = Path(__file__).resolve().parents[1] / "data" / "templates.json"
+CUES_PATH = Path(__file__).resolve().parents[1] / "data" / "audio" / "cues.json"
 
 
 def dump(path: Path, data: dict) -> None:
@@ -33,10 +35,12 @@ def main() -> None:
     events = json.loads(EVENTS_PATH.read_text())
     dump(FACTS_PATH, build_facts(events))
     dump(TEMPLATES_PATH, build_templates(sorted(_player_names(events).values())))
+    dump(CUES_PATH, {"cues": match_cues(events)})
     positions, late = build_positions(events, seed=SEED)
     dump(POSITIONS_PATH, positions)
     dump(SPEED_PATH, speed_table(positions["frames"]))
     write_report(positions["frames"], late, REPORT_PATH)
+    print(f"cues {CUES_PATH}")
     print(f"facts {FACTS_PATH}")
     print(f"templates {TEMPLATES_PATH}")
     print(f"positions {POSITIONS_PATH}")

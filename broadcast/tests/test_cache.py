@@ -32,6 +32,13 @@ def test_ssml_speaks_the_clock_as_digits():
     assert "Robert Hampstead" in marked
 
 
+def test_ssml_speaks_a_minute_as_an_ordinal():
+    marked = speakable("It's the 87th minute. Arse Snail lead 4 to 1.")
+    assert '<say-as interpret-as="ordinal">87</say-as>' in marked
+    assert "87th" not in marked
+    assert '<say-as interpret-as="cardinal">4</say-as>' in marked
+
+
 def test_blocklist_is_whole_words():
     assert screen_line("The odds have shifted.")["term"] == "odds"
     assert screen_line("That looks nailed on from here.")["verdict"] == "blocked"
@@ -66,7 +73,9 @@ def test_voice_pair_comes_from_the_catalog():
     assert chosen["pt"]["analyst"] == "pt-BR-FranciscaNeural"
 
 
-def test_cache_is_252_lines_and_does_not_call_speech(tmp_path):
+def test_cache_is_252_lines_and_does_not_call_speech(tmp_path, monkeypatch):
+    monkeypatch.delenv("SPEECH_KEY", raising=False)
+    monkeypatch.delenv("SPEECH_REGION", raising=False)
     cache = build_speech_cache(squad_names(), tmp_path)
     assert cache["lines"] == 252
     assert cache["speech"] == "unconfigured"

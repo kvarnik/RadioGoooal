@@ -6,6 +6,8 @@ from verify import verify_line
 
 HOME = "Arsesnail"
 AWAY = "Mancheater City"
+SAY_HOME = "Arse Snail"
+SAY_AWAY = "Man Cheater City"
 STYLES = ["classic", "american", "tactical", "homefan", "poetic"]
 LANGS = ["en", "es", "pt"]
 BIASES = ["neutral", "arsesnail", "city"]
@@ -23,7 +25,7 @@ MOMENTS = [
         "clocks": ["87:00"],
         "scores": ["4-1"],
         "names": [HOME, AWAY],
-        "numbers": ["87:00", "4", "1", "1.15", "1.21", "23", "12"],
+        "numbers": ["87:00", "87", "4", "1", "1.15", "1.21", "23", "12"],
     },
     {
         "id": "hampstead",
@@ -37,7 +39,7 @@ MOMENTS = [
         "clocks": ["87:05"],
         "scores": ["5-1"],
         "names": ["Robert Hampstead", HOME, AWAY],
-        "numbers": ["87:05", "5", "1", "0.43", "1.58", "24"],
+        "numbers": ["87:05", "87", "5", "1", "0.43", "1.58", "24"],
     },
     {
         "id": "push",
@@ -51,7 +53,7 @@ MOMENTS = [
         "clocks": ["88:05"],
         "scores": ["5-1"],
         "names": [HOME, AWAY],
-        "numbers": ["88:05", "5", "1", "4"],
+        "numbers": ["88:05", "88", "5", "1", "4"],
     },
     {
         "id": "rochdale",
@@ -65,7 +67,7 @@ MOMENTS = [
         "clocks": ["91:28"],
         "scores": ["5-2"],
         "names": ["David Rochdale", HOME, AWAY],
-        "numbers": ["91:28", "5", "2", "0.30"],
+        "numbers": ["91:28", "91", "5", "2", "0.30"],
     },
     {
         "id": "dickenson",
@@ -79,7 +81,7 @@ MOMENTS = [
         "clocks": ["91:30"],
         "scores": ["5-3"],
         "names": ["James Dickenson", "David Rochdale", HOME, AWAY],
-        "numbers": ["91:30", "5", "3", "0.51", "2.34", "18"],
+        "numbers": ["91:30", "91", "5", "3", "0.51", "2.34", "18"],
     },
     {
         "id": "recap",
@@ -93,7 +95,7 @@ MOMENTS = [
         "clocks": ["92:00"],
         "scores": ["5-3"],
         "names": [HOME, AWAY],
-        "numbers": ["92:00", "5", "3", "2.34", "18", "1.60", "25"],
+        "numbers": ["92:00", "92", "5", "3", "2.34", "18", "1.60", "25"],
     },
 ]
 
@@ -107,128 +109,183 @@ def _bundle(moment: dict) -> dict:
     }
 
 
+def _line(lang: str, text: dict[str, str]) -> str:
+    return text[lang]
+
+
 def _pair(moment_id: str, style: str, lang: str, bias: str) -> tuple[str, str]:
-    home, away = HOME, AWAY
+    home, away = SAY_HOME, SAY_AWAY
     if moment_id == "open":
-        score = f"{home} 4–1 {away}"
-        call = {
-            "en": f"87:00. {score}. The score is comfortable. The chances are not.",
-            "es": f"87:00. {score}. El marcador es comodo. Las ocasiones, no.",
-            "pt": f"87:00. {score}. O placar e folgado. As chances, nao.",
-        }[lang]
-        analyst = {
-            "en": f"{home} 1.15 expected goals from 23 shots. {away} 1.21 from 12.",
-            "es": f"{home} 1.15 goles esperados en 23 remates. {away} 1.21 en 12.",
-            "pt": f"{home} 1.15 gols esperados em 23 chutes. {away} 1.21 em 12.",
-        }[lang]
+        call = _line(lang, {
+            "en": f"It's the 87th minute, and {home} lead {away} 4 to 1. Comfortable, if you can ignore the chances.",
+            "es": f"Es el minuto 87, y {home} le gana 4 a 1 a {away}. Cómodo, si ignoras las ocasiones.",
+            "pt": f"É o minuto 87, e {home} vence {away} por 4 a 1. Confortável, se você fingir que as chances não existem.",
+        })
+        analyst = _line(lang, {
+            "en": f"{home} have 1.15 expected goals from 23 shots. {away} have 1.21 from 12. The scoreboard is doing charity work.",
+            "es": f"{home} tiene 1.15 goles esperados en 23 remates. {away} tiene 1.21 en 12. El marcador está haciendo caridad.",
+            "pt": f"{home} tem 1.15 gols esperados em 23 chutes. {away} tem 1.21 em 12. O placar está fazendo caridade.",
+        })
         if style == "homefan" and bias == "arsesnail":
-            call = f"87:00. {score}. " + {"en": "Keep it tight.", "es": "Hay que cerrarlo.", "pt": "E segurar."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 87th minute. {home} 4, {away} 1. Sit on it. Let them keep the pretty chances.",
+                "es": f"Es el minuto 87. {home} 4, {away} 1. Siéntate encima. Que se queden con las ocasiones bonitas.",
+                "pt": f"É o minuto 87. {home} 4, {away} 1. Sentem em cima. Que fiquem com as chances bonitas.",
+            })
         elif style == "homefan" and bias == "city":
-            call = f"87:00. {score}. " + {"en": "The chances say this stays open.", "es": "Las ocasiones dicen que sigue abierto.", "pt": "As chances dizem que segue aberto."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 87th minute. {home} 4, {away} 1. Don't applaud that scoreboard. {away} have had the game.",
+                "es": f"Es el minuto 87. {home} 4, {away} 1. No aplaudas ese marcador. El partido lo ha tenido {away}.",
+                "pt": f"É o minuto 87. {home} 4, {away} 1. Não aplaude esse placar. Quem jogou foi {away}.",
+            })
         elif style == "american":
-            call = f"87:00. {score}. " + {"en": "Under four minutes, and the chances disagree.", "es": "Menos de cuatro minutos, y las ocasiones no coinciden.", "pt": "Menos de quatro minutos, e as chances nao batem."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 87th minute. {home} 4, {away} 1. The score is grinning. The chances are not in on the joke.",
+                "es": f"Es el minuto 87. {home} 4, {away} 1. El marcador se ríe. Las ocasiones no entendieron el chiste.",
+                "pt": f"É o minuto 87. {home} 4, {away} 1. O placar está rindo. As chances não entraram na piada.",
+            })
         elif style == "tactical":
-            call = f"87:00. {score}. " + {"en": "The scoreline is running ahead of the chances.", "es": "El marcador va por delante de las ocasiones.", "pt": "O placar vai na frente das chances."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 87th minute. {home} 4, {away} 1. The scoreline is showing off. The chances refuse to clap.",
+                "es": f"Es el minuto 87. {home} 4, {away} 1. El marcador se luce. Las ocasiones se niegan a aplaudir.",
+                "pt": f"É o minuto 87. {home} 4, {away} 1. O placar se exibe. As chances se recusam a aplaudir.",
+            })
         elif style == "poetic":
-            call = f"87:00. {score}. " + {"en": "The evening is not sure of itself.", "es": "La tarde aun no esta segura.", "pt": "A tarde ainda nao tem certeza."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 87th minute. {home} 4, {away} 1. The evening is smirking at its own scoreboard.",
+                "es": f"Es el minuto 87. {home} 4, {away} 1. La tarde se burla de su propio marcador.",
+                "pt": f"É o minuto 87. {home} 4, {away} 1. A tarde zomba do próprio placar.",
+            })
         return call, analyst
 
     if moment_id == "hampstead":
-        base = {
-            "en": f"87:05. Robert Hampstead scores. {home} 5–1 {away}.",
-            "es": f"87:05. Robert Hampstead marca. {home} 5–1 {away}.",
-            "pt": f"87:05. Robert Hampstead marca. {home} 5–1 {away}.",
-        }[lang]
-        analyst = {
-            "en": f"A 0.43 chance from close range. {home} move to 1.58 expected goals, 24 shots.",
-            "es": f"Una ocasion de 0.43 desde muy cerca. {home} llega a 1.58 goles esperados, 24 remates.",
-            "pt": f"Uma chance de 0.43 de muito perto. {home} vai a 1.58 gols esperados, 24 chutes.",
-        }[lang]
+        base = _line(lang, {
+            "en": f"It's the 87th minute. Robert Hampstead scores. {home} 5, {away} 1. Close range, and a little rude.",
+            "es": f"Es el minuto 87. Robert Hampstead marca. {home} 5, {away} 1. Muy cerca, y un poco grosero.",
+            "pt": f"É o minuto 87. Robert Hampstead marca. {home} 5, {away} 1. De muito perto, e um tanto grosseiro.",
+        })
+        analyst = _line(lang, {
+            "en": f"A 0.43 chance from close range. {home} stroll to 1.58 expected goals and 24 shots.",
+            "es": f"Una ocasión de 0.43 desde muy cerca. {home} llega a 1.58 goles esperados y 24 remates.",
+            "pt": f"Uma chance de 0.43 de muito perto. {home} vai a 1.58 gols esperados e 24 chutes.",
+        })
         if style == "homefan" and bias == "arsesnail":
-            base += {"en": " That one is in.", "es": " Esa entro.", "pt": " Essa entrou."}[lang]
+            base = _line(lang, {
+                "en": f"It's the 87th minute. Robert Hampstead scores. {home} 5, {away} 1. Frame that one. {away} can watch the replay.",
+                "es": f"Es el minuto 87. Robert Hampstead marca. {home} 5, {away} 1. Enmárcalo. {away} puede ver la repetición.",
+                "pt": f"É o minuto 87. Robert Hampstead marca. {home} 5, {away} 1. Emoldura essa. {away} pode ver o replay.",
+            })
+        elif style == "homefan" and bias == "city":
+            base = _line(lang, {
+                "en": f"It's the 87th minute. Robert Hampstead scores. {home} 5, {away} 1. Of course he does.",
+                "es": f"Es el minuto 87. Robert Hampstead marca. {home} 5, {away} 1. Claro que sí.",
+                "pt": f"É o minuto 87. Robert Hampstead marca. {home} 5, {away} 1. Claro que marca.",
+            })
         elif style == "tactical":
-            base = {
-                "en": f"87:05. Robert Hampstead finishes a 0.43 chance from close range. {home} 5–1 {away}.",
-                "es": f"87:05. Robert Hampstead define una ocasion de 0.43 desde muy cerca. {home} 5–1 {away}.",
-                "pt": f"87:05. Robert Hampstead conclui uma chance de 0.43 de muito perto. {home} 5–1 {away}.",
-            }[lang]
+            base = _line(lang, {
+                "en": f"It's the 87th minute. Robert Hampstead finishes a 0.43 chance from close range. {home} 5, {away} 1.",
+                "es": f"Es el minuto 87. Robert Hampstead define una ocasión de 0.43 desde muy cerca. {home} 5, {away} 1.",
+                "pt": f"É o minuto 87. Robert Hampstead conclui uma chance de 0.43 de muito perto. {home} 5, {away} 1.",
+            })
         elif style == "poetic":
-            base = {
-                "en": f"87:05. Robert Hampstead scores, close range. {home} 5–1 {away}.",
-                "es": f"87:05. Robert Hampstead marca, muy cerca. {home} 5–1 {away}.",
-                "pt": f"87:05. Robert Hampstead marca, muito perto. {home} 5–1 {away}.",
-            }[lang]
+            base = _line(lang, {
+                "en": f"It's the 87th minute. Robert Hampstead scores from close range. {home} 5, {away} 1. A small cruelty, neatly done.",
+                "es": f"Es el minuto 87. Robert Hampstead marca desde muy cerca. {home} 5, {away} 1. Una crueldad pequeña, bien hecha.",
+                "pt": f"É o minuto 87. Robert Hampstead marca de muito perto. {home} 5, {away} 1. Uma crueldade pequena, bem feita.",
+            })
         return base, analyst
 
     if moment_id == "push":
-        call = {
-            "en": f"88:05. {away} have 4 shots, and none has gone in. {home} 5–1 {away}.",
-            "es": f"88:05. {away} lleva 4 remates, y ninguno entro. {home} 5–1 {away}.",
-            "pt": f"88:05. {away} tem 4 chutes, e nenhum entrou. {home} 5–1 {away}.",
-        }[lang]
-        analyst = {
-            "en": f"4 shots from {away} since 88:05. The score stays 5–1.",
-            "es": f"4 remates de {away} desde 88:05. El marcador sigue 5–1.",
-            "pt": f"4 chutes de {away} desde 88:05. O placar segue 5–1.",
-        }[lang]
+        call = _line(lang, {
+            "en": f"It's the 88th minute. {away} have had 4 shots, and none of them remembered to go in. {home} 5, {away} 1.",
+            "es": f"Es el minuto 88. {away} lleva 4 remates, y ninguno se acordó de entrar. {home} 5, {away} 1.",
+            "pt": f"É o minuto 88. {away} teve 4 chutes, e nenhum lembrou de entrar. {home} 5, {away} 1.",
+        })
+        analyst = _line(lang, {
+            "en": f"4 shots from {away}. The score stays 5 to 1. Plenty of effort. No punchline.",
+            "es": f"4 remates de {away}. El marcador sigue 5 a 1. Mucho esfuerzo. Ningún remate.",
+            "pt": f"4 chutes de {away}. O placar segue 5 a 1. Muito esforço. Nenhuma piada final.",
+        })
         if style == "homefan" and bias == "city":
-            call = {
-                "en": f"88:05. {away} keep coming. 4 shots. {home} 5–1 {away}.",
-                "es": f"88:05. {away} sigue llegando. 4 remates. {home} 5–1 {away}.",
-                "pt": f"88:05. {away} segue chegando. 4 chutes. {home} 5–1 {away}.",
-            }[lang]
+            call = _line(lang, {
+                "en": f"It's the 88th minute. {away} keep coming. 4 shots. {home} 5, {away} 1. The score is a rumor. The chances are the match.",
+                "es": f"Es el minuto 88. {away} sigue llegando. 4 remates. {home} 5, {away} 1. El marcador es un rumor. Las ocasiones son el partido.",
+                "pt": f"É o minuto 88. {away} continua chegando. 4 chutes. {home} 5, {away} 1. O placar é um boato. As chances são o jogo.",
+            })
         elif style == "homefan" and bias == "arsesnail":
-            call = {
-                "en": f"88:05. {away} have 4 shots. Clear it. {home} 5–1 {away}.",
-                "es": f"88:05. {away} lleva 4 remates. A despejar. {home} 5–1 {away}.",
-                "pt": f"88:05. {away} tem 4 chutes. E afastar. {home} 5–1 {away}.",
-            }[lang]
+            call = _line(lang, {
+                "en": f"It's the 88th minute. {away} have 4 shots. Clear it, and try not to laugh. {home} 5, {away} 1.",
+                "es": f"Es el minuto 88. {away} lleva 4 remates. Despeja, y procura no reírte. {home} 5, {away} 1.",
+                "pt": f"É o minuto 88. {away} tem 4 chutes. Afasta, e tenta não rir. {home} 5, {away} 1.",
+            })
         return call, analyst
 
     if moment_id == "rochdale":
-        call = {
-            "en": f"91:28. David Rochdale scores. {home} 5–2 {away}.",
-            "es": f"91:28. David Rochdale marca. {home} 5–2 {away}.",
-            "pt": f"91:28. David Rochdale marca. {home} 5–2 {away}.",
-        }[lang]
-        analyst = {
-            "en": "A 0.30 chance. The pressure finally tells.",
-            "es": "Una ocasion de 0.30. La presion al fin pesa.",
-            "pt": "Uma chance de 0.30. A pressao enfim pesa.",
-        }[lang]
-        if style == "tactical":
-            call = {
-                "en": f"91:28. David Rochdale converts a 0.30 chance. {home} 5–2 {away}.",
-                "es": f"91:28. David Rochdale convierte una ocasion de 0.30. {home} 5–2 {away}.",
-                "pt": f"91:28. David Rochdale converte uma chance de 0.30. {home} 5–2 {away}.",
-            }[lang]
+        call = _line(lang, {
+            "en": f"It's the 91st minute. David Rochdale scores. {home} 5, {away} 2. They found the net. Only a few minutes late.",
+            "es": f"Es el minuto 91. David Rochdale marca. {home} 5, {away} 2. Encontraron la red. Solo unos minutos tarde.",
+            "pt": f"É o minuto 91. David Rochdale marca. {home} 5, {away} 2. Acharam a rede. Só uns minutos atrasados.",
+        })
+        analyst = _line(lang, {
+            "en": "A 0.30 chance. The pressure finally did something useful.",
+            "es": "Una ocasión de 0.30. La presión por fin sirvió para algo.",
+            "pt": "Uma chance de 0.30. A pressão finalmente serviu para alguma coisa.",
+        })
+        if style == "homefan" and bias == "city":
+            call = _line(lang, {
+                "en": f"It's the 91st minute. David Rochdale scores. {home} 5, {away} 2. About time. {away} have been the better side and the score knew it.",
+                "es": f"Es el minuto 91. David Rochdale marca. {home} 5, {away} 2. Ya era hora. {away} fue mejor, y el marcador lo sabía.",
+                "pt": f"É o minuto 91. David Rochdale marca. {home} 5, {away} 2. Já era hora. {away} foi melhor, e o placar sabia.",
+            })
+        elif style == "tactical":
+            call = _line(lang, {
+                "en": f"It's the 91st minute. David Rochdale converts a 0.30 chance. {home} 5, {away} 2.",
+                "es": f"Es el minuto 91. David Rochdale convierte una ocasión de 0.30. {home} 5, {away} 2.",
+                "pt": f"É o minuto 91. David Rochdale converte uma chance de 0.30. {home} 5, {away} 2.",
+            })
+        elif style == "poetic":
+            call = _line(lang, {
+                "en": f"It's the 91st minute. David Rochdale scores. {home} 5, {away} 2. A late apology from the goal.",
+                "es": f"Es el minuto 91. David Rochdale marca. {home} 5, {away} 2. Una disculpa tardía del arco.",
+                "pt": f"É o minuto 91. David Rochdale marca. {home} 5, {away} 2. Um pedido de desculpas atrasado do gol.",
+            })
         return call, analyst
 
     if moment_id == "dickenson":
-        call = {
-            "en": f"91:30. James Dickenson scores. {home} 5–3 {away}.",
-            "es": f"91:30. James Dickenson marca. {home} 5–3 {away}.",
-            "pt": f"91:30. James Dickenson marca. {home} 5–3 {away}.",
-        }[lang]
-        analyst = {
-            "en": f"A 0.51 chance, two seconds after David Rochdale. {away} finish on 2.34 expected goals from 18 shots.",
-            "es": f"Una ocasion de 0.51, dos segundos despues de David Rochdale. {away} cierra con 2.34 goles esperados en 18 remates.",
-            "pt": f"Uma chance de 0.51, dois segundos depois de David Rochdale. {away} fecha com 2.34 gols esperados em 18 chutes.",
-        }[lang]
+        call = _line(lang, {
+            "en": f"It's the 91st minute. James Dickenson scores. {home} 5, {away} 3. Two bites, back to back.",
+            "es": f"Es el minuto 91. James Dickenson marca. {home} 5, {away} 3. Dos mordiscos, uno detrás del otro.",
+            "pt": f"É o minuto 91. James Dickenson marca. {home} 5, {away} 3. Duas mordidas, uma atrás da outra.",
+        })
+        analyst = _line(lang, {
+            "en": f"A 0.51 chance, right after David Rochdale. {away} finish on 2.34 expected goals from 18 shots. Lively. Still not enough.",
+            "es": f"Una ocasión de 0.51, justo después de David Rochdale. {away} cierra con 2.34 goles esperados en 18 remates. Animado. Y no alcanza.",
+            "pt": f"Uma chance de 0.51, logo depois de David Rochdale. {away} fecha com 2.34 gols esperados em 18 chutes. Animado. E não chega.",
+        })
         if style == "homefan" and bias == "arsesnail":
-            call += {"en": " Still 5–3.", "es": " Sigue 5–3.", "pt": " Segue 5–3."}[lang]
+            call = _line(lang, {
+                "en": f"It's the 91st minute. James Dickenson scores. {home} 5, {away} 3. How generous. Still 5 to 3.",
+                "es": f"Es el minuto 91. James Dickenson marca. {home} 5, {away} 3. Qué generoso. Sigue 5 a 3.",
+                "pt": f"É o minuto 91. James Dickenson marca. {home} 5, {away} 3. Que generoso. Continua 5 a 3.",
+            })
+        elif style == "homefan" and bias == "city":
+            call = _line(lang, {
+                "en": f"It's the 91st minute. James Dickenson scores. {home} 5, {away} 3. That's the real team, arriving late and still sharper.",
+                "es": f"Es el minuto 91. James Dickenson marca. {home} 5, {away} 3. Ese es el equipo de verdad, tarde y todavía más fino.",
+                "pt": f"É o minuto 91. James Dickenson marca. {home} 5, {away} 3. Esse é o time de verdade, atrasado e ainda mais afiado.",
+            })
         return call, analyst
 
-    call = {
-        "en": f"92:00. {home} 5–3 {away}. {home} 1.60 expected goals from 25 shots. {away} 2.34 from 18.",
-        "es": f"92:00. {home} 5–3 {away}. {home} 1.60 goles esperados en 25 remates. {away} 2.34 en 18.",
-        "pt": f"92:00. {home} 5–3 {away}. {home} 1.60 gols esperados em 25 chutes. {away} 2.34 em 18.",
-    }[lang]
-    analyst = {
-        "en": f"No further shots. {away} made more of the chances: 2.34 to 1.60.",
-        "es": f"No hay mas remates. {away} tuvo mas ocasiones: 2.34 contra 1.60.",
-        "pt": f"Nao ha mais chutes. {away} criou mais: 2.34 a 1.60.",
-    }[lang]
+    call = _line(lang, {
+        "en": f"It's the 92nd minute. {home} 5, {away} 3. {home}, 1.60 expected goals from 25 shots. {away}, 2.34 from 18.",
+        "es": f"Es el minuto 92. {home} 5, {away} 3. {home}, 1.60 goles esperados en 25 remates. {away}, 2.34 en 18.",
+        "pt": f"É o minuto 92. {home} 5, {away} 3. {home}, 1.60 gols esperados em 25 chutes. {away}, 2.34 em 18.",
+    })
+    analyst = _line(lang, {
+        "en": f"No further shots. {away} made more of the chances, 2.34 to 1.60, and still walk off behind. The scoreboard doesn't do sarcasm. I do.",
+        "es": f"No hay más remates. {away} creó más, 2.34 contra 1.60, y se va por detrás. El marcador no sabe de sarcasmo. Yo sí.",
+        "pt": f"Não há mais chutes. {away} criou mais, 2.34 a 1.60, e sai atrás. O placar não sabe sarcasmo. Eu sei.",
+    })
     return call, analyst
 
 

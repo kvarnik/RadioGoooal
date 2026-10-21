@@ -1,0 +1,11 @@
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+tests
+data/audio/clips
+data/audio/stems
+data/9000001-positions.json
+data/facts.json
+data/speed.json
+data/templates.json

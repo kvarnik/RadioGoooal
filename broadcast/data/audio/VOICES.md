@@ -1,7 +1,13 @@
 # Voices
 
-Speech is not configured. No short name has been chosen.
+Chosen from the neural voices on the Speech resource.
 
-Set `SPEECH_KEY` and `SPEECH_REGION`, then run `python tools/build_cache.py` from `broadcast/`. The build reads the neural voices on that resource and writes the six short names here.
+- en play-by-play: `en-US-GuyNeural`
+- en analyst: `en-US-AvaNeural`
+- es play-by-play: `es-ES-NilNeural`
+- es analyst: `es-ES-LiaNeural`
+- pt play-by-play: `pt-BR-FabioNeural`
+- pt analyst: `pt-BR-ElzaNeural`
 
-The script cache is 96112 characters of SSML, under the 100,000 character stop. That count uses the placeholder voice name `pending-voice-name`.
+The cache asked Speech for 93699 characters.
+Region `eastus2`.

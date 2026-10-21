@@ -4,17 +4,26 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from api.vault import load_key_vault
 from workflow import load_agents, rewrite_call, squad_names
 
 CACHE_PATH = Path(__file__).resolve().parents[1] / "data" / "audio" / "cache.json"
 
-app = FastAPI(title="RadioGoooal")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    load_key_vault()
+    yield
+
+
+app = FastAPI(title="RadioGoooal", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,6 +55,7 @@ def cache_summary() -> dict:
 
 
 @app.get("/healthz")
+@app.get("/api/healthz")
 def healthz() -> dict:
     safety_key = os.environ.get("CONTENT_SAFETY_KEY") and os.environ.get("CONTENT_SAFETY_ENDPOINT")
     safety = "azure" if safety_key else "local-word-list"
@@ -61,6 +71,7 @@ def healthz() -> dict:
 
 
 @app.post("/rewrite")
+@app.post("/api/rewrite")
 def rewrite(body: RewriteRequest) -> dict:
     try:
         return rewrite_call(body.sec, body.style, body.lang, body.bias, SQUAD)

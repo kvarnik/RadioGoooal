@@ -8,6 +8,13 @@ let generation = 0;
 let callSource = null;
 let analystSource = null;
 let analystTrim = null;
+let loops = [];
+let effects = new Map();
+let loopSources = [];
+let loopRun = 0;
+let starting = false;
+let effectGeneration = 0;
+const liveEffects = new Set();
 
 function graph() {
   if (ctx) return ctx;
@@ -37,6 +44,112 @@ export function setFader(id, level) {
   if (gains[id]) gains[id].gain.value = level;
 }
 
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  const pushRow = () => {
+    row.push(cell);
+    if (row.some((value) => value !== "")) rows.push(row);
+    row = [];
+    cell = "";
+  };
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i += 1;
+        } else {
+          quoted = false;
+        }
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n") {
+      pushRow();
+    } else if (char !== "\r") {
+      cell += char;
+    }
+  }
+  if (cell.length || row.length) pushRow();
+  const [header, ...body] = rows;
+  return body.map((cols) => Object.fromEntries(header.map((key, index) => [key, cols[index] ?? ""])));
+}
+
+export function loadInventory(text) {
+  const rows = parseCsv(text);
+  loops = rows.filter((row) => row.playback === "loop" && row.filename && row.bus);
+  effects = new Map(rows.filter((row) => row.playback === "oneshot" && row.role).map((row) => [row.role, row]));
+  for (const row of rows) bufferFor(row.filename);
+  return rows;
+}
+
+export function startLoops() {
+  if (loopSources.length || starting) {
+    graph().resume();
+    return;
+  }
+  starting = true;
+  const run = loopRun;
+  const context = graph();
+  context.resume();
+  Promise.all(loops.map(async (row) => {
+    const buffer = await bufferFor(row.filename);
+    if (run !== loopRun || !buffer) return null;
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gains[row.bus]);
+    source.start();
+    return source;
+  })).then((sources) => {
+    starting = false;
+    const live = sources.filter(Boolean);
+    if (run !== loopRun) {
+      for (const source of live) stopSource(source);
+      return;
+    }
+    loopSources = live;
+  });
+}
+
+export function stopLoops() {
+  loopRun += 1;
+  starting = false;
+  for (const source of loopSources) stopSource(source);
+  loopSources = [];
+}
+
+export async function playEffect(role) {
+  const row = effects.get(role);
+  if (!row?.filename) return;
+  const token = effectGeneration;
+  const context = graph();
+  const resume = context.resume();
+  const buffer = await bufferFor(row.filename);
+  await resume;
+  if (token !== effectGeneration || !buffer) return;
+  const started = connect(buffer, row.bus || "match", 1);
+  liveEffects.add(started.source);
+  started.source.onended = () => {
+    liveEffects.delete(started.source);
+  };
+}
+
+export function stopEffects() {
+  effectGeneration += 1;
+  for (const source of liveEffects) stopSource(source);
+  liveEffects.clear();
+}
+
 function stopSource(source) {
   if (!source) return;
   source.onended = null;
@@ -59,7 +172,7 @@ export function stopVoices() {
 async function bufferFor(file) {
   const url = `../data/audio/${file}`;
   if (buffers.has(url)) return buffers.get(url);
-  const response = await fetch(url);
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) return null;
   const audio = await graph().decodeAudioData(await response.arrayBuffer());
   buffers.set(url, audio);

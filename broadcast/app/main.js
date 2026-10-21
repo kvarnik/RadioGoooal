@@ -1,4 +1,13 @@
-import { setFader, startVoices, stopVoices } from "./audio.js";
+import {
+  loadInventory,
+  playEffect,
+  setFader,
+  startLoops,
+  startVoices,
+  stopEffects,
+  stopLoops,
+  stopVoices,
+} from "./audio.js?v=3";
 
 const HOME = "1";
 const AWAY = "36";
@@ -43,6 +52,8 @@ let templates;
 let positions;
 let speed;
 let cache = null;
+let cues = [];
+let pendingSpeak = null;
 let acc = 0;
 let resume = false;
 let scanning = 0;
@@ -86,6 +97,22 @@ function speakMoment(moment) {
   startVoices(clipFor(moment, "call"), clipFor(moment, "analyst"));
 }
 
+function effectsAt(sec) {
+  return cues.find((cue) => cue.t === sec)?.effects ?? [];
+}
+
+function effectsBetween(from, to) {
+  const names = [];
+  for (const cue of cues) {
+    if (from < cue.t && cue.t <= to) names.push(...cue.effects);
+  }
+  return names;
+}
+
+function hear(names) {
+  for (const name of names) playEffect(name);
+}
+
 function seek(next) {
   const previous = state.sec;
   acc = 0;
@@ -93,7 +120,10 @@ function seek(next) {
   state.rewritten = false;
   state.rewriteNote = "";
   stopVoices();
-  if (state.sec !== previous) speakMoment(templates?.moments.find((item) => item.t === state.sec));
+  if (state.sec !== previous) {
+    speakMoment(templates?.moments.find((item) => item.t === state.sec));
+    hear(effectsAt(state.sec));
+  }
   render();
 }
 
@@ -106,6 +136,7 @@ function scanStart(dir) {
   state.playing = true;
   state.rate = dir * 6;
   state.scan = dir;
+  startLoops();
   render();
 }
 
@@ -117,6 +148,10 @@ function scanEnd() {
   state.playing = resume;
   state.rate = 1;
   state.scan = 0;
+  if (!resume) {
+    stopLoops();
+    stopEffects();
+  }
   render();
 }
 
@@ -137,7 +172,11 @@ function play() {
   state.playing = true;
   state.rate = 1;
   state.scan = 0;
-  speakMoment(templates?.moments.find((item) => item.t === state.sec));
+  startLoops();
+  const moment = templates?.moments.find((item) => item.t === state.sec);
+  if (templates) speakMoment(moment);
+  else pendingSpeak = state.sec;
+  hear(effectsAt(state.sec));
   render();
 }
 
@@ -146,6 +185,8 @@ function pause() {
   state.rate = 1;
   state.scan = 0;
   stopVoices();
+  stopLoops();
+  stopEffects();
   render();
 }
 
@@ -166,17 +207,21 @@ function tick() {
   const next = Math.max(0, Math.min(300, state.sec + step));
   const stop = (next === 300 && step > 0) || (next === 0 && step < 0);
   state.sec = next;
-  if (step > 0 && !state.scan) {
-    let crossed = null;
-    for (const moment of templates.moments) {
-      if (previous < moment.t && moment.t <= next) crossed = moment;
+  if (step > 0) {
+    hear(effectsBetween(previous, next));
+    if (!state.scan) {
+      let crossed = null;
+      for (const moment of templates.moments) {
+        if (previous < moment.t && moment.t <= next) crossed = moment;
+      }
+      if (crossed) speakMoment(crossed);
     }
-    if (crossed) speakMoment(crossed);
   }
   state.rewritten = false;
   if (stop) {
     state.playing = false;
     state.rate = 1;
+    stopLoops();
   }
   render();
 }
@@ -354,7 +399,11 @@ function bindTransport() {
     state.rewritten = true;
     state.rewriteNote = "Local template. The live rewrite waits on the API.";
     render();
-    fetch("http://127.0.0.1:8787/rewrite", {
+    const host = location.hostname;
+    const rewriteUrl = host === "127.0.0.1" || host === "localhost"
+      ? "http://127.0.0.1:8787/rewrite"
+      : "/api/rewrite";
+    fetch(rewriteUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sec: state.sec, style: state.style, lang: state.lang, bias: state.bias }),
@@ -450,12 +499,14 @@ function bindChoices() {
 }
 
 async function load() {
-  const [factFile, templateFile, positionFile, speedFile, cacheFile] = await Promise.all([
+  const [factFile, templateFile, positionFile, speedFile, cacheFile, cueFile, inventoryFile] = await Promise.all([
     fetch("../data/facts.json"),
-    fetch("../data/templates.json"),
+    fetch("../data/templates.json", { cache: "no-store" }),
     fetch("../data/9000001-positions.json"),
     fetch("../data/speed.json"),
-    fetch("../data/audio/cache.json"),
+    fetch("../data/audio/cache.json", { cache: "no-store" }),
+    fetch("../data/audio/cues.json"),
+    fetch("../data/audio/sources.csv"),
   ]);
   if (![factFile, templateFile, positionFile, speedFile].every((response) => response.ok)) {
     $("call").textContent = "The cached files did not load. Serve the repo root and open broadcast/app/.";
@@ -466,8 +517,15 @@ async function load() {
   positions = await positionFile.json();
   speed = await speedFile.json();
   cache = cacheFile.ok ? await cacheFile.json() : null;
+  cues = cueFile.ok ? (await cueFile.json()).cues : [];
+  if (inventoryFile.ok) loadInventory(await inventoryFile.text());
   state.ready = true;
   render();
+  if (pendingSpeak !== null) {
+    const sec = pendingSpeak;
+    pendingSpeak = null;
+    speakMoment(templates.moments.find((item) => item.t === sec));
+  }
 }
 
 bindTransport();
